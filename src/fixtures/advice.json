@@ -1,53 +1,50 @@
 {
-  "question": "Should YC double down on Bay Area founders or expand globally?",
+  "question": "Should YC double down on Bay Area founders or expand to global remote founders?",
   "relevant_pages": [
     {
       "title": "Cities and Ambition (2008 essay)",
-      "url": "/brain/2008-essays/cities-and-ambition.md",
-      "relevance": "Your original thesis on why cities concentrate ambition — the take you self-graded 'partially correct' (pg-002). Held through 2019, weakened after"
+      "url": "/brain/essays/cities-and-ambition.md",
+      "relevance": "Original thesis on geographic concentration of ambition — self-graded partially correct"
     },
     {
-      "title": "Conversation with Jessica on YC W26 batch distribution",
-      "url": "/brain/2026-02-11-jessica-batch-geography.md",
-      "relevance": "Internal data: W26 had 38% non-Bay-Area founders, up from 22% in W23. The shift is structural, not cyclical"
+      "title": "Super-angels will displace VCs (2010)",
+      "url": "/brain/essays/super-angels.md",
+      "relevance": "High-conviction structural call that backfired — VCs adapted"
     },
     {
-      "title": "Founder talent flow 2020-2025 (research note)",
-      "url": "/brain/2025-09-18-talent-flow-research.md",
-      "relevance": "Net migration: Lisbon +280%, Bangalore +190%, Austin +150% in YC alum density since 2020"
+      "title": "Founder talent flow 2020-2025",
+      "url": "/brain/notes/talent-flow.md",
+      "relevance": "Net migration data: Lisbon +280%, Bangalore +190%, Austin +150%"
     },
     {
-      "title": "Why I was wrong about SF indefinitely (2024 retrospective)",
-      "url": "/brain/2024-06-03-sf-indefinitely-retrospective.md",
-      "relevance": "Your own retrospective on pg-003. You documented the bias: assuming concentration mechanics are permanent because they were historically dominant"
+      "title": "Why I was wrong about SF indefinitely",
+      "url": "/brain/essays/sf-retrospective.md",
+      "relevance": "Self-documented bias: assumed concentration mechanics are permanent"
     }
   ],
   "calibration_adjustment": {
-    "applicable_pattern": "Under-weighted geographic shifts since 2020",
-    "adjustment_text": "Two geographic predictions resolved against you: pg-003 (SF dominance is permanent — refuted, SF share fell ~70% to ~38%) and pg-002 (cities concentrate ambition — only half-true post-2020). The current question maps directly onto this bias: you're being asked whether to extrapolate Bay Area concentration forward. Your 50% hit rate on geography (n=4) means treat the Bay Area instinct as a coin flip, not a conviction."
+    "applicable_pattern": "High conviction correlates with correctness in product/founder but backfires in macro/structural",
+    "adjustment_text": "Your high-conviction macro/structural calls have a low hit rate. Cities-as-talent-magnets, super-angels-displace-VCs — both were wrong. This question is structural. Treat your Bay Area conviction as a warning signal, not a guide."
   },
   "fresh_signal": [
     {
-      "source": "PitchBook",
-      "title": "AI startup formation outside SF up 64% YoY through Q1 2026",
-      "url": "https://pitchbook.com/news/articles/ai-startup-geography-2026",
-      "date": "2026-04-22",
-      "summary": "First quarter where non-SF AI seed funding exceeded SF AI seed funding by dollar volume. Driven by NYC and London catching up on talent density"
+      "source": "LinkedIn",
+      "title": "Resend site now renders as Markdown for AI Agents",
+      "url": "https://www.linkedin.com/posts/zenorocha",
+      "date": "2026-05-14"
     },
     {
-      "source": "YC internal",
-      "title": "W26 batch: SF 38% / NYC 14% / Remote 22% / International 26%",
-      "url": "/brain/2026-03-28-w26-batch-stats.md",
-      "date": "2026-03-28",
-      "summary": "First batch where Bay Area is no longer the plurality. Application data shows the shift is upstream — fewer SF applicants, higher quality from non-SF hubs"
+      "source": "TechCrunch",
+      "title": "CopilotKit raises $27M to help devs deploy app-native AI agents",
+      "url": "https://techcrunch.com/2026/05/05/copilotkit-raises-27m",
+      "date": "2026-05-05"
     },
     {
-      "source": "Garry's batch debrief",
-      "title": "International founders out-executing SF founders on revenue milestones (current batch)",
-      "url": "/brain/2026-05-04-garry-debrief.md",
-      "date": "2026-05-04",
-      "summary": "International cohort hit $10K MRR median 6 weeks earlier than SF cohort. n=87, statistically meaningful per the analytics team"
+      "source": "TechCrunch",
+      "title": "AI research lab NeoCognition lands $40M seed to build agents that learn like humans",
+      "url": "https://techcrunch.com/2026/04/21/neocognition",
+      "date": "2026-04-21"
     }
   ],
-  "synthesized_take": "Expand globally, with structure. Your geographic predictions have a 50% hit rate (n=4) and the two that resolved against you both extrapolated Bay Area dominance — pg-002 and pg-003 are the exact bias the current question triggers. Fresh signal is unambiguous: W26 made SF no longer the plurality, AI seed funding tilted non-SF this quarter, and international founders are out-executing SF founders in the current batch. The Bay Area instinct is your weakest-calibrated domain pulling on your strongest-calibrated topic. Net move: keep SF as one hub of four, not the default. Concentrated YC programs in NYC, London, and one APAC city within 12 months. Hold scope on the SF program at current size — don't cut, don't grow. The next pg-002/pg-003-shaped mistake is the one to avoid; this is exactly the moment the calibration tool exists to catch."
+  "synthesized_take": "Expand to global remote founders, with structure. Your pattern is clear: high conviction on macro/structural questions backfires — cities-as-talent-magnets was partially wrong, super-angels-displace-VCs was wrong. This question triggers that exact pattern. The Bay Area instinct is your weakest signal here. Net move: diversify deliberately."
 }

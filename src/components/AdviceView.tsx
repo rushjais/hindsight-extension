@@ -7,9 +7,6 @@ import type {
 const RELEVANCE_SCORES = [94, 87, 81, 76, 71, 67];
 const WARNING_AMBER = '#CA8A04';
 
-const WARNING_HEADLINE =
-  "Your geography predictions are 50% accurate — coin flip territory. Don't trust your Bay Area instinct here.";
-
 const ANSWER_BULLETS: { text: string; lead?: boolean }[] = [
   { text: 'Keep SF as one hub of four, not the default', lead: true },
   { text: 'Concentrated YC programs in NYC, London, and one APAC city' },
@@ -18,13 +15,14 @@ const ANSWER_BULLETS: { text: string; lead?: boolean }[] = [
 ];
 
 export function AdviceView({ data }: { data: AdviceResult }) {
-  const {
-    question,
-    relevant_pages,
-    calibration_adjustment,
-    fresh_signal,
-    synthesized_take,
-  } = data;
+  const question = data?.question ?? '';
+  const relevant_pages = data?.relevant_pages ?? [];
+  const fresh_signal = data?.fresh_signal ?? [];
+  const synthesized_take = data?.synthesized_take ?? '';
+  const calibration_adjustment = data?.calibration_adjustment ?? {
+    applicable_pattern: '',
+    adjustment_text: '',
+  };
   const bullets = parseAnswer(synthesized_take);
 
   return (
@@ -61,7 +59,7 @@ export function AdviceView({ data }: { data: AdviceResult }) {
           </h2>
         </div>
         <p className="text-[14px] font-medium leading-[1.45] text-foreground">
-          {WARNING_HEADLINE}
+          {calibration_adjustment.adjustment_text}
         </p>
         <p className="mt-3 text-[11px] leading-[1.5] text-text-muted">
           <span className="font-semibold uppercase tracking-[0.06em]">

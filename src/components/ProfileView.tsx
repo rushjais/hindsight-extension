@@ -84,7 +84,19 @@ function CalibrationTooltip({
 }
 
 export function ProfileView({ data }: { data: ProfileViewData }) {
-  const { profile, contradictions } = data;
+  const profile = data.profile ?? {
+    user: '',
+    corpus_size: 0,
+    total_takes: 0,
+    resolved_takes: 0,
+    overall_hit_rate: 0,
+    by_domain: [],
+    patterns: [],
+    highlight_takes: [],
+  };
+  const contradictions = data.contradictions ?? [];
+  const by_domain = profile.by_domain ?? [];
+  const highlight_takes = profile.highlight_takes ?? [];
   const hasResolved = profile.resolved_takes > 0;
   const pctText = hasResolved
     ? (profile.overall_hit_rate * 100).toFixed(1)
@@ -134,7 +146,7 @@ export function ProfileView({ data }: { data: ProfileViewData }) {
         <h2 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.06em] text-text-secondary">
           Domain Performance
         </h2>
-        {profile.by_domain.length === 0 ? (
+        {by_domain.length === 0 ? (
           <EmptyHint>
             {profile.total_takes === 0
               ? 'Start logging takes to see your domain breakdown.'
@@ -142,7 +154,7 @@ export function ProfileView({ data }: { data: ProfileViewData }) {
           </EmptyHint>
         ) : null}
         <div className="space-y-3">
-          {profile.by_domain.map((d) => {
+          {by_domain.map((d) => {
             const pct = Math.round(d.hit_rate * 100);
             return (
               <div key={d.domain}>
@@ -219,11 +231,11 @@ export function ProfileView({ data }: { data: ProfileViewData }) {
         <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-text-secondary">
           Recent Verdicts
         </h2>
-        {profile.highlight_takes.length === 0 ? (
+        {highlight_takes.length === 0 ? (
           <EmptyHint>Verdicts appear once outcomes resolve.</EmptyHint>
         ) : null}
         <div className="divide-y divide-border border-y border-border">
-          {profile.highlight_takes.map((t) => (
+          {highlight_takes.map((t) => (
             <div
               key={t.take_id}
               className="flex items-start gap-2.5 py-2.5"

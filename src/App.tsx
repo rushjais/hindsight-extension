@@ -105,10 +105,34 @@ export default function App() {
       </header>
 
       <main className="flex-1 overflow-y-auto">
-        {view === 'profile'
-          ? profile && <ProfileView data={profile} />
-          : advice && <AdviceView data={advice} />}
+        {view === 'profile' ? (
+          profile ? (
+            <ProfileView data={profile} />
+          ) : (
+            <LoadingState />
+          )
+        ) : advice ? (
+          <AdviceView data={advice} />
+        ) : (
+          <LoadingState />
+        )}
       </main>
+    </div>
+  );
+}
+
+function LoadingState() {
+  return (
+    <div className="flex h-full items-center justify-center px-4 py-16">
+      <div className="flex flex-col items-center gap-2 text-text-muted">
+        <span
+          aria-hidden
+          className="inline-block size-3 animate-spin rounded-full border-2 border-border border-t-primary"
+        />
+        <span className="text-[11px] uppercase tracking-[0.08em]">
+          Loading…
+        </span>
+      </div>
     </div>
   );
 }

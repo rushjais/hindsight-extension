@@ -28,7 +28,7 @@ function forceFixtureOnly(): boolean {
 const BASE_URL = 'http://localhost:3001';
 
 export const DEMO_QUESTION =
-  'Should YC double down on Bay Area founders or expand globally?';
+  'Should YC double down on Bay Area founders or expand to global remote founders?';
 
 export type ProfileResponse = typeof profileFixture;
 
@@ -37,50 +37,103 @@ export type FetchResult<T> = { data: T; live: boolean };
 let profileCache: ProfileResponse | null = null;
 let adviceCache: AdviceResult | null = null;
 
+const FETCH_TIMEOUT_MS = 3000;
+
 async function postJSON<T>(path: string, body: unknown): Promise<T | null> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+  console.log('[skillsClient] fetch start →', path);
   try {
     const res = await fetch(`${BASE_URL}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
+      signal: ctrl.signal,
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return (await res.json()) as T;
-  } catch {
+    const json = (await res.json()) as T;
+    console.log('[skillsClient] fetch ok ←', path, json);
+    return json;
+  } catch (err) {
+    console.warn('[skillsClient] fetch failed ✗', path, err);
     return null;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
+// Server returns the typed envelope `HindsightProfileOutput { profile: Profile }`,
+// but the view also needs `contradictions[]`. We unwrap the envelope and merge
+// contradictions from the fixture until the server exposes them via
+// /skills/find-contradictions on the demo path.
 async function fetchProfile(
   resolvedTakes: Take[],
 ): Promise<ProfileResponse | null> {
-  return postJSON<ProfileResponse>('/skills/hindsight-profile', {
+  const raw = await postJSON<unknown>('/skills/hindsight-profile', {
     resolved_takes: resolvedTakes,
   });
+  if (!raw || typeof raw !== 'object') return null;
+  const r = raw as Record<string, unknown>;
+  const profile =
+    (r.profile as ProfileResponse['profile'] | undefined) ??
+    (looksLikeProfile(r)
+      ? (r as unknown as ProfileResponse['profile'])
+      : undefined);
+  if (!profile) {
+    console.warn('[skillsClient] profile response missing .profile', raw);
+    return null;
+  }
+  const contradictions =
+    (r.contradictions as ProfileResponse['contradictions'] | undefined) ??
+    profileFixture.contradictions;
+  return { profile, contradictions };
 }
 
+// Server returns `CalibratedAdviseOutput { advice: AdviceResult }`. We unwrap.
 async function fetchAdvice(
   question: string,
   profile: Profile,
   forcePattern?: string,
 ): Promise<AdviceResult | null> {
-  return postJSON<AdviceResult>('/skills/calibrated-advise', {
+  const raw = await postJSON<unknown>('/skills/calibrated-advise', {
     question,
     profile,
     force_pattern: forcePattern,
   });
+  if (!raw || typeof raw !== 'object') return null;
+  const r = raw as Record<string, unknown>;
+  const advice =
+    (r.advice as AdviceResult | undefined) ??
+    (r as unknown as AdviceResult);
+  if (!advice || typeof advice !== 'object' || !('question' in advice)) {
+    console.warn('[skillsClient] advice response missing required fields', raw);
+    return null;
+  }
+  return advice;
+}
+
+function looksLikeProfile(r: Record<string, unknown>): boolean {
+  return 'overall_hit_rate' in r && 'by_domain' in r;
 }
 
 export async function getProfile(
   resolvedTakes: Take[],
 ): Promise<FetchResult<ProfileResponse>> {
-  if (forceFixtureOnly()) return { data: fixtureForState(), live: false };
-  if (profileCache) return { data: profileCache, live: true };
+  if (forceFixtureOnly()) {
+    console.log('[skillsClient] getProfile → forced fixture');
+    return { data: fixtureForState(), live: false };
+  }
+  if (profileCache) {
+    console.log('[skillsClient] getProfile → cache hit');
+    return { data: profileCache, live: true };
+  }
   const fresh = await fetchProfile(resolvedTakes);
   if (fresh) {
     profileCache = fresh;
+    console.log('[skillsClient] getProfile → live', fresh);
     return { data: fresh, live: true };
   }
+  console.log('[skillsClient] getProfile → fixture fallback');
   return { data: fixtureForState(), live: false };
 }
 
