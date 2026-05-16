@@ -1,73 +1,41 @@
-# React + TypeScript + Vite
+# Hindsight
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+> The self-reflection layer GBrain doesn't have yet.
 
-Currently, two official plugins are available:
+## What it is
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Hindsight extracts your past predictions from GBrain, grades them against what actually happened, and corrects future advice for your specific blind spots.
 
-## React Compiler
+## Built for
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+YC GStack × GBrain Hackathon, May 16 2026
 
-## Expanding the ESLint configuration
+## The five new GBrain skills
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **extract-takes** — pulls gradeable predictions from brain pages
+- **resolve-outcomes** — grades takes against public outcomes
+- **find-contradictions** — detects where you changed your mind
+- **hindsight-profile** — builds your calibration profile
+- **calibrated-advise** — gives advice that accounts for your blind spots
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Tech stack
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- React + Vite + TypeScript + Tailwind + shadcn/ui
+- GStack Browser extension (MV3)
+- ZeroEntropy `zerank-2` for brain page retrieval
+- The Hog API for fresh signal
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Install the GBrain skills
+
+```bash
+gbrain skillpack install https://github.com/rayan-arya/hindsight-skills
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Load the extension
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+1. `bun install && bun run build`
+2. `chrome://extensions` → Developer mode → **Load unpacked** → select `dist/`
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Team
+
+Rushil Jaiswal, Rayan Arya, Keshav Kotamraju
