@@ -1,0 +1,13 @@
+[
+  {
+    "thread_title": "Frighteningly Ambitious Startup Ideas",
+    "source_essay": "frighteningly-ambitious.md",
+    "source_date": "2012-03-01",
+    "original_quote": "I think there are 7 ambitious ideas...",
+    "market_evidence": [
+      { "event": "Perplexity launches AI search", "year": 2022, "validated": true },
+      { "event": "Linear/Slack reshape email", "year": 2018, "validated": true }
+    ],
+    "why_resurface": "PG never wrote the follow-up grading himself against the 7 ideas."
+  }
+]

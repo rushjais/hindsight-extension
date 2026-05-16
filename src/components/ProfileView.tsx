@@ -4,6 +4,21 @@ import type {
   Profile,
   TakeDomain,
 } from '@hindsight/types';
+
+type AbandonedThreadEvidence = {
+  event: string;
+  year: number;
+  validated: boolean;
+};
+
+type AbandonedThread = {
+  thread_title: string;
+  source_essay: string;
+  source_date: string;
+  original_quote: string;
+  market_evidence: AbandonedThreadEvidence[];
+  why_resurface: string;
+};
 import {
   Bar,
   BarChart,
@@ -16,10 +31,11 @@ import {
 type HighlightTakeView = {
   take_id: string;
   claim_text: string;
-  claim_date: string;
-  domain: TakeDomain;
   verdict_summary: string;
-  verdict: OutcomeVerdict;
+  // Optional — older captures may omit these fields
+  claim_date?: string;
+  domain?: TakeDomain;
+  verdict?: OutcomeVerdict;
 };
 
 export type ProfileViewData = {
@@ -27,6 +43,7 @@ export type ProfileViewData = {
     highlight_takes: HighlightTakeView[];
   };
   contradictions: ContradictionPair[];
+  abandoned_threads?: AbandonedThread[];
 };
 
 type VerdictStyle = { text: string; bg: string; fg: string };
@@ -45,15 +62,9 @@ function verdictStyle(v: OutcomeVerdict): VerdictStyle {
 }
 
 const CALIBRATION_DATA = [
-  { name: 'Low Conv.', full: 'Low conviction', yours: 45, bench: 50, n: 8 },
-  {
-    name: 'Medium Conv.',
-    full: 'Medium conviction',
-    yours: 68,
-    bench: 60,
-    n: 13,
-  },
-  { name: 'High Conv.', full: 'High conviction', yours: 82, bench: 65, n: 17 },
+  { name: 'Low Conv.', full: 'Low conviction', yours: 45, n: 8 },
+  { name: 'Medium Conv.', full: 'Medium conviction', yours: 68, n: 13 },
+  { name: 'High Conv.', full: 'High conviction', yours: 82, n: 17 },
 ];
 
 type CalibrationDatum = (typeof CALIBRATION_DATA)[number];
@@ -77,7 +88,7 @@ function CalibrationTooltip({
         accurate
       </div>
       <div className="mt-0.5 font-mono tabular-nums text-text-muted">
-        n={d.n} takes · peers {d.bench}%
+        n={d.n} takes
       </div>
     </div>
   );
@@ -95,6 +106,7 @@ export function ProfileView({ data }: { data: ProfileViewData }) {
     highlight_takes: [],
   };
   const contradictions = data.contradictions ?? [];
+  const abandoned_threads = data.abandoned_threads ?? [];
   const by_domain = profile.by_domain ?? [];
   const highlight_takes = profile.highlight_takes ?? [];
   const hasResolved = profile.resolved_takes > 0;
@@ -129,10 +141,9 @@ export function ProfileView({ data }: { data: ProfileViewData }) {
               </span>
             ) : null}
           </h1>
-          {hasResolved ? <TrendBadge delta="+2.4%" /> : null}
         </div>
         <p className="mt-1 text-[12px] font-medium text-foreground">
-          Relatively calibrated vs. peers
+          Across {profile.corpus_size ?? 228} Paul Graham essays
         </p>
         <p className="mt-1 text-[12px] leading-[1.4] text-text-muted">
           {profile.total_takes === 0
@@ -190,8 +201,7 @@ export function ProfileView({ data }: { data: ProfileViewData }) {
             Calibration Curve
           </h2>
           <div className="flex items-center gap-3 text-[10px] text-text-secondary">
-            <LegendSwatch color="#D97757" label="You" />
-            <LegendSwatch color="#E5E3DE" label="Peers" />
+            <LegendSwatch color="#D97757" label="Hit rate by conviction" />
           </div>
         </div>
         <div style={{ width: '100%', height: 160 }}>
@@ -220,7 +230,6 @@ export function ProfileView({ data }: { data: ProfileViewData }) {
                 content={<CalibrationTooltip />}
               />
               <Bar dataKey="yours" fill="#D97757" radius={[2, 2, 0, 0]} />
-              <Bar dataKey="bench" fill="#E5E3DE" radius={[2, 2, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -240,14 +249,21 @@ export function ProfileView({ data }: { data: ProfileViewData }) {
               key={t.take_id}
               className="flex items-start gap-2.5 py-2.5"
             >
-              <VerdictBadge verdict={t.verdict} />
+              {t.verdict ? <VerdictBadge verdict={t.verdict} /> : null}
               <div className="min-w-0 flex-1">
-                <div className="font-mono text-[10px] uppercase tabular-nums text-text-muted">
-                  {t.claim_date} · {t.domain}
-                </div>
-                <p className="mt-0.5 text-[13px] leading-[1.4] text-foreground">
+                {(t.claim_date || t.domain) ? (
+                  <div className="font-mono text-[10px] uppercase tabular-nums text-text-muted">
+                    {[t.claim_date, t.domain].filter(Boolean).join(' · ')}
+                  </div>
+                ) : null}
+                <p className="text-[13px] leading-[1.4] text-foreground">
                   {t.claim_text}
                 </p>
+                {t.verdict_summary ? (
+                  <p className="mt-1 text-[11px] leading-[1.4] text-text-muted">
+                    {t.verdict_summary}
+                  </p>
+                ) : null}
               </div>
             </div>
           ))}
@@ -308,23 +324,108 @@ export function ProfileView({ data }: { data: ProfileViewData }) {
           ))}
         </div>
       </section>
+
+      {/* THREADS WORTH REOPENING */}
+      {abandoned_threads.length > 0 ? (
+        <section>
+          <h2
+            className="mb-3 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em]"
+            style={{ color: '#D97757' }}
+          >
+            <ReopenIcon />
+            Threads Worth Reopening
+          </h2>
+          <div className="space-y-3">
+            {abandoned_threads.map((t) => (
+              <article
+                key={t.thread_title}
+                className="border border-border bg-card p-4"
+              >
+                <div className="text-[13px] font-semibold text-foreground">
+                  {t.thread_title}
+                </div>
+                <div className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.04em] text-text-muted">
+                  {t.source_essay}
+                  <span className="mx-1.5 text-text-muted/60">·</span>
+                  {t.source_date}
+                </div>
+
+                <blockquote
+                  className="mt-3 border-l-2 pl-3 text-[13px] italic leading-[1.5] text-text-secondary"
+                  style={{ borderColor: 'rgba(217, 119, 87, 0.4)' }}
+                >
+                  "{t.original_quote}"
+                </blockquote>
+
+                <ul className="mt-3 space-y-1.5">
+                  {t.market_evidence.map((e) => (
+                    <li
+                      key={`${e.event}-${e.year}`}
+                      className="flex items-baseline gap-2 text-[12px] leading-[1.4] text-foreground"
+                    >
+                      {e.validated ? (
+                        <CheckIcon />
+                      ) : (
+                        <span
+                          aria-hidden
+                          className="mt-[5px] inline-block size-1.5 shrink-0 rounded-full bg-text-muted"
+                        />
+                      )}
+                      <span className="min-w-0 flex-1">{e.event}</span>
+                      <span className="shrink-0 font-mono text-[10px] tabular-nums text-text-muted">
+                        {e.year}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+
+                <p className="mt-3 border-t border-border pt-3 text-[12px] italic leading-[1.5] text-text-secondary">
+                  {t.why_resurface}
+                </p>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }
 
-function TrendBadge({ delta }: { delta: string }) {
+function ReopenIcon() {
   return (
-    <span
-      className="flex items-baseline gap-0.5 text-[12px] font-semibold tabular-nums"
-      style={{ color: '#1A7F37' }}
-      title="vs. last 30 days"
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
     >
-      <UpArrowIcon />
-      {delta}
-      <span className="ml-1 text-[10px] font-normal text-text-muted">
-        vs last 30 days
-      </span>
-    </span>
+      <polyline points="1 4 1 10 7 10" />
+      <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg
+      width="11"
+      height="11"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#1A7F37"
+      strokeWidth="3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      className="mt-[3px] shrink-0"
+    >
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
   );
 }
 
@@ -369,7 +470,8 @@ function ShiftDivider() {
   );
 }
 
-function VerdictBadge({ verdict }: { verdict: OutcomeVerdict }) {
+function VerdictBadge({ verdict }: { verdict?: OutcomeVerdict }) {
+  if (!verdict) return null;
   const { text, bg, fg } = verdictStyle(verdict);
   return (
     <span
@@ -387,24 +489,6 @@ function EmptyHint({ children }: { children: React.ReactNode }) {
   );
 }
 
-function UpArrowIcon() {
-  return (
-    <svg
-      width="10"
-      height="10"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <line x1="12" y1="19" x2="12" y2="5" />
-      <polyline points="5 12 12 5 19 12" />
-    </svg>
-  );
-}
 
 function ShiftIcon() {
   return (

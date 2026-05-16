@@ -10,13 +10,37 @@ import profileEmptyFixture from '@/fixtures/profile-empty.json';
 import profilePartialFixture from '@/fixtures/profile-partial.json';
 import adviceFixture from '@/fixtures/advice.json';
 
-function fixtureForState(): typeof profileFixture {
-  if (typeof window === 'undefined') return profileFixture;
+// profile.json is now FLAT (the Profile object itself, no wrapping).
+// empty/partial fixtures are still wrapped {profile, contradictions}.
+// ProfileResponse is what the ProfileView consumes — always wrapped.
+const wrappedProfileFixture: ProfileResponse = {
+  profile: profileFixture as unknown as ProfileResponse['profile'],
+  contradictions: [
+    {
+      topic: 'What VCs are like',
+      claim_a: {
+        text: 'VCs are arrogant and sneaky',
+        source_page: 'essays/vc-arrogant.md',
+        date: '2005-03-01',
+      },
+      claim_b: {
+        text: 'VCs are actually more upstanding than I thought, just timid',
+        source_page: 'essays/vc-upstanding.md',
+        date: '2008-11-01',
+      },
+      contradiction_summary:
+        'In 2005 he called VCs arrogant and sneaky; in 2008 he conceded they were actually more upstanding than he thought — just timid.',
+    },
+  ],
+};
+
+function fixtureForState(): ProfileResponse {
+  if (typeof window === 'undefined') return wrappedProfileFixture;
   const state = new URLSearchParams(window.location.search).get('state');
-  if (state === 'empty') return profileEmptyFixture as typeof profileFixture;
+  if (state === 'empty') return profileEmptyFixture as unknown as ProfileResponse;
   if (state === 'partial')
-    return profilePartialFixture as typeof profileFixture;
-  return profileFixture;
+    return profilePartialFixture as unknown as ProfileResponse;
+  return wrappedProfileFixture;
 }
 
 function forceFixtureOnly(): boolean {
@@ -27,21 +51,149 @@ function forceFixtureOnly(): boolean {
 
 const BASE_URL = 'http://localhost:3001';
 
-export const DEMO_QUESTION =
-  'Should YC double down on Bay Area founders or expand to global remote founders?';
+// The shape ProfileView consumes: wrapped Profile + contradictions list.
+// The on-disk profile.json is now flat; we wrap it in `wrappedProfileFixture`
+// before handing it to consumers.
+export type AbandonedThreadEvidence = {
+  event: string;
+  year: number;
+  validated: boolean;
+};
 
-export type ProfileResponse = typeof profileFixture;
+export type AbandonedThread = {
+  thread_title: string;
+  source_essay: string;
+  source_date: string;
+  original_quote: string;
+  market_evidence: AbandonedThreadEvidence[];
+  why_resurface: string;
+};
+
+export type ProfileResponse = {
+  profile: typeof profileFixture;
+  contradictions: ContradictionPair[];
+  abandoned_threads?: AbandonedThread[];
+};
 
 export type FetchResult<T> = { data: T; live: boolean };
 
 let profileCache: ProfileResponse | null = null;
-let adviceCache: AdviceResult | null = null;
+
+// Captured fixtures from hindsight-skills, when present. Loaded by
+// loadCapturedFixtures() on mount. These take precedence over the baked-in
+// src/fixtures/ files in the fallback path.
+let capturedProfile: ProfileResponse | null = null;
+let capturedAdvice: AdviceResult | null = null;
+
+/**
+ * Loads `src/fixtures/captured/{profile,advice}.json` if present and stores
+ * them as the primary fixture source. Symlink that directory to
+ * `~/hindsight-skills/data/captured/` so Rayan's commits flow in on rebuild.
+ * Returns which files were found so callers can log / decide.
+ *
+ * Files must exist at build time — Vite resolves the glob then. The captured
+ * directory not existing is OK: glob returns empty, function is a no-op.
+ */
+export async function loadCapturedFixtures(): Promise<{
+  profileLoaded: boolean;
+  adviceLoaded: boolean;
+}> {
+  const profileMatches = import.meta.glob(
+    '/src/fixtures/captured/profile.json',
+    { eager: true },
+  ) as Record<string, { default: unknown }>;
+  const adviceMatches = import.meta.glob(
+    '/src/fixtures/captured/advice.json',
+    { eager: true },
+  ) as Record<string, { default: AdviceResult }>;
+  const contradictionMatches = import.meta.glob(
+    '/src/fixtures/contradiction-fallback.json',
+    { eager: true },
+  ) as Record<string, { default: unknown }>;
+  const abandonedMatches = import.meta.glob(
+    '/src/fixtures/abandoned-threads.json',
+    { eager: true },
+  ) as Record<string, { default: unknown }>;
+
+  const rawProfile = Object.values(profileMatches)[0]?.default ?? null;
+  const a = Object.values(adviceMatches)[0]?.default ?? null;
+  const rawContradiction =
+    Object.values(contradictionMatches)[0]?.default ?? null;
+
+  const rawAbandoned = Object.values(abandonedMatches)[0]?.default ?? null;
+  let abandonedThreads: AbandonedThread[] | null = null;
+  if (Array.isArray(rawAbandoned)) {
+    abandonedThreads = rawAbandoned as AbandonedThread[];
+    console.log(
+      '[skillsClient] abandoned threads loaded',
+      abandonedThreads.length,
+    );
+  }
+
+  // The fallback file is a single ContradictionPair. Strip any `_meta` and
+  // wrap as a one-element array so the view's contradictions list renders it.
+  let contradictionFallback: ContradictionPair[] | null = null;
+  if (rawContradiction && typeof rawContradiction === 'object') {
+    const { _meta, ...rest } = rawContradiction as Record<string, unknown> & {
+      _meta?: unknown;
+    };
+    void _meta;
+    contradictionFallback = [rest as unknown as ContradictionPair];
+    console.log(
+      '[DEMO_MODE] contradictions from fallback',
+      contradictionFallback,
+    );
+  }
+
+  // Captured profile may be flat (Profile) or wrapped ({profile, contradictions}).
+  // Normalize to the wrapped ProfileResponse shape the view consumes.
+  if (rawProfile && typeof rawProfile === 'object') {
+    const r = rawProfile as Record<string, unknown>;
+    const innerProfile =
+      (r.profile as ProfileResponse['profile'] | undefined) ??
+      (r as unknown as ProfileResponse['profile']);
+    // Resolution: profile's own contradictions > curated fallback file > synthetic PG/VC.
+    const innerContradictions =
+      (r.contradictions as ProfileResponse['contradictions'] | undefined) ??
+      contradictionFallback ??
+      wrappedProfileFixture.contradictions;
+    capturedProfile = {
+      profile: innerProfile,
+      contradictions: innerContradictions,
+      abandoned_threads: abandonedThreads ?? undefined,
+    };
+    console.log('[skillsClient] captured profile loaded ✓');
+  } else {
+    capturedProfile = null;
+    console.log('[skillsClient] captured profile not present');
+  }
+
+  // If the contradiction fallback loaded but there's no captured profile,
+  // splice it into the baked-in wrappedProfileFixture so the default fallback
+  // path also gets the curated contradiction (replaces the synthetic PG/VC).
+  if (contradictionFallback && !capturedProfile) {
+    wrappedProfileFixture.contradictions = contradictionFallback;
+  }
+  if (abandonedThreads && !capturedProfile) {
+    wrappedProfileFixture.abandoned_threads = abandonedThreads;
+  }
+
+  capturedAdvice = a;
+  if (a) console.log('[skillsClient] captured advice loaded ✓');
+  else console.log('[skillsClient] captured advice not present');
+
+  return { profileLoaded: !!capturedProfile, adviceLoaded: !!a };
+}
 
 const FETCH_TIMEOUT_MS = 3000;
 
-async function postJSON<T>(path: string, body: unknown): Promise<T | null> {
+async function postJSON<T>(
+  path: string,
+  body: unknown,
+  timeoutMs: number = FETCH_TIMEOUT_MS,
+): Promise<T | null> {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   console.log('[skillsClient] fetch start →', path);
   try {
     const res = await fetch(`${BASE_URL}${path}`, {
@@ -84,31 +236,60 @@ async function fetchProfile(
     return null;
   }
   const contradictions =
-    (r.contradictions as ProfileResponse['contradictions'] | undefined) ??
-    profileFixture.contradictions;
+    (r.contradictions as ProfileResponse['contradictions'] | undefined) ?? [];
   return { profile, contradictions };
 }
 
-// Server returns `CalibratedAdviseOutput { advice: AdviceResult }`. We unwrap.
+// Server returns `CalibratedAdviseOutput { advice: AdviceResult }`. We unwrap
+// the envelope and only accept the live response if it carries a usable
+// synthesized_take (non-empty string). Anything else → fixture fallback.
+//
+// calibrated-advise can take 30-60s end-to-end (Claude generation +
+// ZeroEntropy rerank + Hog signal merge), so we override the default
+// 3s timeout to 60s for this single endpoint.
+const ADVICE_TIMEOUT_MS = 60_000;
+
 async function fetchAdvice(
   question: string,
   profile: Profile,
   forcePattern?: string,
 ): Promise<AdviceResult | null> {
-  const raw = await postJSON<unknown>('/skills/calibrated-advise', {
-    question,
-    profile,
-    force_pattern: forcePattern,
-  });
-  if (!raw || typeof raw !== 'object') return null;
+  console.log('[advice] POST start');
+  const start =
+    typeof performance !== 'undefined' ? performance.now() : Date.now();
+  const raw = await postJSON<unknown>(
+    '/skills/calibrated-advise',
+    {
+      question,
+      profile,
+      force_pattern: forcePattern,
+    },
+    ADVICE_TIMEOUT_MS,
+  );
+  const elapsed = Math.round(
+    (typeof performance !== 'undefined' ? performance.now() : Date.now()) -
+      start,
+  );
+  console.log(`[advice] POST returned in ${elapsed}ms`);
+
+  if (!raw || typeof raw !== 'object') {
+    console.warn('[advice] response was null or non-object');
+    return null;
+  }
   const r = raw as Record<string, unknown>;
   const advice =
     (r.advice as AdviceResult | undefined) ??
     (r as unknown as AdviceResult);
-  if (!advice || typeof advice !== 'object' || !('question' in advice)) {
-    console.warn('[skillsClient] advice response missing required fields', raw);
+  if (!advice || typeof advice !== 'object') {
+    console.warn('[advice] response not an object', raw);
     return null;
   }
+  const take = (advice as Partial<AdviceResult>).synthesized_take;
+  if (typeof take !== 'string' || take.trim().length === 0) {
+    console.warn('[advice] response missing synthesized_take', advice);
+    return null;
+  }
+  console.log('[advice] live ✓ synthesized_take present');
   return advice;
 }
 
@@ -123,6 +304,13 @@ export async function getProfile(
     console.log('[skillsClient] getProfile → forced fixture');
     return { data: fixtureForState(), live: false };
   }
+  // Captured fixtures are the locked demo content — primary source.
+  // We skip the live fetch when present (the live server returns an empty
+  // profile when called with resolved_takes: []).
+  if (capturedProfile) {
+    console.log('[skillsClient] getProfile → captured (primary)');
+    return { data: capturedProfile, live: false };
+  }
   if (profileCache) {
     console.log('[skillsClient] getProfile → cache hit');
     return { data: profileCache, live: true };
@@ -133,24 +321,50 @@ export async function getProfile(
     console.log('[skillsClient] getProfile → live', fresh);
     return { data: fresh, live: true };
   }
-  console.log('[skillsClient] getProfile → fixture fallback');
+  console.log('[skillsClient] getProfile → baked-in fixture fallback');
   return { data: fixtureForState(), live: false };
 }
 
+/**
+ * Live advice call. Empty question short-circuits to null — no fixture,
+ * no live call — because the UI requires the user to ask something first.
+ *
+ * The `takes` param is forward-looking: when supplied, the right behavior
+ * is to compute a fresh Profile via /skills/hindsight-profile first, then
+ * call advice. Not implemented yet — for the demo we use the captured /
+ * baked-in profile internally. Drop a TODO here when wiring that.
+ */
 export async function getAdvice(
   question: string,
-  profile: Profile,
-  forcePattern?: string,
-): Promise<FetchResult<AdviceResult>> {
+  _takes?: Take[],
+): Promise<FetchResult<AdviceResult> | null> {
+  if (!question.trim()) return null;
+  void _takes;
   if (forceFixtureOnly())
     return { data: adviceFixture as AdviceResult, live: false };
-  if (adviceCache) return { data: adviceCache, live: true };
-  const fresh = await fetchAdvice(question, profile, forcePattern);
+  const profileForAdvice = (capturedProfile?.profile ??
+    (profileFixture as unknown as Profile)) as Profile;
+  const fresh = await fetchAdvice(question, profileForAdvice);
   if (fresh) {
-    adviceCache = fresh;
     return { data: fresh, live: true };
   }
+  if (capturedAdvice) {
+    console.log(
+      '[advice] using captured fallback because: live fetchAdvice returned null (timeout, network error, or invalid response)',
+    );
+    return { data: capturedAdvice, live: false };
+  }
+  console.log(
+    '[advice] using captured fallback because: no captured loaded — falling through to baked-in fixture',
+  );
   return { data: adviceFixture as AdviceResult, live: false };
+}
+
+/** Read the captured demo advice synchronously — used by the manual
+ * "Load captured demo answer" fallback button in AdviceView. Returns null
+ * until loadCapturedFixtures() has run. */
+export function getCapturedAdvice(): AdviceResult | null {
+  return capturedAdvice;
 }
 
 export async function extractTakes(
@@ -180,16 +394,16 @@ export async function findContradictions(
 
 export type PrefetchResult = {
   profileLive: boolean;
-  adviceLive: boolean;
 };
 
+/**
+ * Mount-time warmup. Only fetches the profile now — advice is request-driven
+ * (the user types a question in AdviceView, which calls getAdvice on submit).
+ */
 export async function prefetch(): Promise<PrefetchResult> {
-  if (forceFixtureOnly()) return { profileLive: false, adviceLive: false };
-  const profile = await fetchProfile([]);
+  if (forceFixtureOnly()) return { profileLive: false };
+  // Skip live profile fetch when captured fixture is the demo's source of truth.
+  const profile = capturedProfile ? null : await fetchProfile([]);
   if (profile) profileCache = profile;
-  const profileForAdvice = (profile ?? profileFixture)
-    .profile as unknown as Profile;
-  const advice = await fetchAdvice(DEMO_QUESTION, profileForAdvice);
-  if (advice) adviceCache = advice;
-  return { profileLive: !!profile, adviceLive: !!advice };
+  return { profileLive: !!profile };
 }

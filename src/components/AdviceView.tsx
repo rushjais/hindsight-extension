@@ -1,42 +1,219 @@
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from 'react';
 import type {
   AdviceResult,
   BrainPage,
   FreshSignalItem,
 } from '@hindsight/types';
+import { getAdvice, getCapturedAdvice } from '@/lib/skillsClient';
 
 const RELEVANCE_SCORES = [94, 87, 81, 76, 71, 67];
 const WARNING_AMBER = '#CA8A04';
 
+const BLIND_SPOT_HEADLINE_MAX_WORDS = 16;
+const BLIND_SPOT_PATTERN_MAX_WORDS = 12;
+const BLIND_SPOT_FALLBACK_HEADLINE =
+  "Check the domain breakdown for this question's calibration.";
+
+function clampWords(s: string, max: number): string {
+  const trimmed = s.trim();
+  if (!trimmed) return '';
+  const words = trimmed.split(/\s+/);
+  if (words.length <= max) return trimmed;
+  return words.slice(0, max).join(' ') + '…';
+}
+
+// Resolve the Blind Spot Warning from the live response. Accepts two shapes:
+// the contract-correct `calibration_adjustment` (Hindsight types), and a
+// forward-looking `blind_spot` shape Rayan may ship later. Falls back to a
+// generic sentence if neither is present.
+function resolveBlindSpot(advice: AdviceResult | null): {
+  headline: string;
+  pattern: string;
+} {
+  const bs = (advice as unknown as {
+    blind_spot?: { headline?: string; pattern?: string };
+  } | null)?.blind_spot;
+  const adj = advice?.calibration_adjustment;
+
+  const rawHeadline = bs?.headline ?? adj?.adjustment_text ?? '';
+  const rawPattern = bs?.pattern ?? adj?.applicable_pattern ?? '';
+
+  const headline =
+    clampWords(rawHeadline, BLIND_SPOT_HEADLINE_MAX_WORDS) ||
+    BLIND_SPOT_FALLBACK_HEADLINE;
+  const pattern = clampWords(rawPattern, BLIND_SPOT_PATTERN_MAX_WORDS);
+
+  return { headline, pattern };
+}
+
+// Fallback when the live answer can't be parsed into 3 short bullets.
+// Order matches the readability rule: recommendation, historical reason,
+// what fresh signal changes.
 const ANSWER_BULLETS: { text: string; lead?: boolean }[] = [
-  { text: 'Keep SF as one hub of four, not the default', lead: true },
-  { text: 'Concentrated YC programs in NYC, London, and one APAC city' },
-  { text: 'Don\u2019t cut SF \u2014 hold at current size' },
-  { text: 'Geographic instinct is your weakest-calibrated domain' },
+  { text: 'Expand to global remote founders — go broad on geography', lead: true },
+  { text: 'Past high-conviction structural calls have a low hit rate here' },
+  { text: 'AI tooling is collapsing the Bay Area density advantage' },
 ];
 
-export function AdviceView({ data }: { data: AdviceResult }) {
-  const question = data?.question ?? '';
-  const relevant_pages = data?.relevant_pages ?? [];
-  const fresh_signal = data?.fresh_signal ?? [];
-  const synthesized_take = data?.synthesized_take ?? '';
-  const calibration_adjustment = data?.calibration_adjustment ?? {
-    applicable_pattern: '',
-    adjustment_text: '',
+export function AdviceView() {
+  const [question, setQuestion] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [advice, setAdvice] = useState<AdviceResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  // The question the user actually submitted (frozen at submit time).
+  // Drives the Question card so the user's typed text is always what's
+  // shown — never overwritten by what the server echoes back.
+  const [submittedQuestion, setSubmittedQuestion] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    textareaRef.current?.focus();
+  }, []);
+
+  const submit = useCallback(async () => {
+    const q = question.trim();
+    if (!q || loading) return;
+    setLoading(true);
+    setError(null);
+    setAdvice(null);
+    setSubmittedQuestion(q);
+    try {
+      const result = await getAdvice(q);
+      if (result?.data) {
+        setAdvice(result.data);
+      } else {
+        setError(
+          'No answer came back from the skills server. Use the captured demo as a fallback.',
+        );
+      }
+    } catch {
+      setError(
+        'Request failed. Use the captured demo as a fallback.',
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [question, loading]);
+
+  const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      e.preventDefault();
+      void submit();
+    }
   };
+
+  const loadCapturedFallback = useCallback(() => {
+    const cap = getCapturedAdvice();
+    if (cap) {
+      setAdvice(cap);
+      setError(null);
+    } else {
+      setError(
+        'Captured demo answer is not loaded. Reload the extension.',
+      );
+    }
+  }, []);
+
+  const canSubmit = question.trim().length > 0 && !loading;
+  const relevant_pages = advice?.relevant_pages ?? [];
+  const fresh_signal = advice?.fresh_signal ?? [];
+  const synthesized_take = advice?.synthesized_take ?? '';
   const bullets = parseAnswer(synthesized_take);
+  const blindSpot = resolveBlindSpot(advice);
 
   return (
     <div className="flex flex-col gap-6 p-4">
-      {/* QUESTION CARD */}
+      {/* ASK INPUT */}
       <section className="border border-border bg-card p-4">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-text-secondary">
-          Question
+        <label
+          htmlFor="hindsight-ask"
+          className="text-[11px] font-semibold uppercase tracking-[0.06em] text-text-secondary"
+        >
+          Ask
+        </label>
+        <textarea
+          id="hindsight-ask"
+          ref={textareaRef}
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          onKeyDown={onKeyDown}
+          placeholder="Ask Paul Graham's brain anything…"
+          rows={2}
+          disabled={loading}
+          className="mt-2 w-full resize-none rounded-md border border-border bg-background p-3 text-[14px] leading-[1.45] text-foreground placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15 disabled:opacity-60"
+        />
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <span className="text-[10px] text-text-muted">
+            <kbd className="font-mono">⌘</kbd>
+            <span className="mx-0.5">+</span>
+            <kbd className="font-mono">↵</kbd>
+            <span className="ml-1">to send</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => void submit()}
+            disabled={!canSubmit}
+            className="rounded-md bg-primary px-4 py-1.5 text-[13px] font-semibold text-white transition-colors duration-fast hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {loading ? 'Asking…' : 'Ask'}
+          </button>
         </div>
-        <p className="mt-2 text-[15px] italic leading-[1.4] text-foreground">
-          "{question}"
-        </p>
       </section>
 
+      {/* LOADING */}
+      {loading ? (
+        <section className="border border-border bg-card p-4 text-center">
+          <div className="flex flex-col items-center gap-2 text-text-muted">
+            <span
+              aria-hidden
+              className="inline-block size-3 animate-spin rounded-full border-2 border-border border-t-primary"
+            />
+            <span className="text-[12px]">Reading 181 takes…</span>
+          </div>
+        </section>
+      ) : null}
+
+      {/* ERROR */}
+      {error ? (
+        <section
+          className="border p-4"
+          style={{
+            backgroundColor: 'rgba(217, 119, 87, 0.06)',
+            borderColor: 'rgba(217, 119, 87, 0.3)',
+          }}
+        >
+          <p className="text-[13px] leading-[1.45] text-foreground">{error}</p>
+          <button
+            type="button"
+            onClick={loadCapturedFallback}
+            className="mt-2 rounded-md border border-primary/40 bg-card px-3 py-1 text-[12px] font-semibold text-primary transition-colors duration-fast hover:bg-primary/5"
+          >
+            Load captured demo answer
+          </button>
+        </section>
+      ) : null}
+
+      {/* QUESTION CARD — shows immediately on submit, sourced from local state */}
+      {submittedQuestion ? (
+        <section className="border border-border bg-card p-4">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-text-secondary">
+            Question
+          </div>
+          <p className="mt-2 text-[15px] italic leading-[1.4] text-foreground">
+            "{submittedQuestion}"
+          </p>
+        </section>
+      ) : null}
+
+      {/* Everything below renders only after an answer arrives */}
+      {advice ? (
+        <>
       {/* ACCURACY GAUGE — top visual anchor */}
       <section className="border border-border bg-card px-4 py-5">
         <div className="flex flex-col items-center">
@@ -59,15 +236,17 @@ export function AdviceView({ data }: { data: AdviceResult }) {
           </h2>
         </div>
         <p className="text-[14px] font-medium leading-[1.45] text-foreground">
-          {calibration_adjustment.adjustment_text}
+          {blindSpot.headline}
         </p>
-        <p className="mt-3 text-[11px] leading-[1.5] text-text-muted">
-          <span className="font-semibold uppercase tracking-[0.06em]">
-            Pattern
-          </span>
-          <span className="mx-1.5 text-text-muted/60">·</span>
-          {calibration_adjustment.applicable_pattern}
-        </p>
+        {blindSpot.pattern ? (
+          <p className="mt-3 text-[11px] leading-[1.5] text-text-muted">
+            <span className="font-semibold uppercase tracking-[0.06em]">
+              Pattern
+            </span>
+            <span className="mx-1.5 text-text-muted/60">·</span>
+            {blindSpot.pattern}
+          </p>
+        ) : null}
       </section>
 
       {/* BRAIN PAGES — titles + relevance, nothing else */}
@@ -114,17 +293,19 @@ export function AdviceView({ data }: { data: AdviceResult }) {
           ))}
         </ul>
       </section>
+        </>
+      ) : null}
     </div>
   );
 }
 
-const MAX_WORDS_PER_BULLET = 12;
-
-function truncateWords(s: string, max: number): string {
-  const words = s.split(/\s+/);
-  if (words.length <= max) return s;
-  return words.slice(0, max).join(' ') + '...';
-}
+// Readability rules applied to every Calibrated Answer render:
+//   - Max 3 bullets
+//   - Max 14 words per bullet (longer sentences are skipped, not truncated)
+//   - No ellipsis — bullets must be full short sentences
+// Fall back to ANSWER_BULLETS when the input has no qualifying sentences.
+const MAX_BULLETS = 3;
+const MAX_WORDS_PER_BULLET = 14;
 
 function parseAnswer(
   text: string | undefined | null,
@@ -132,15 +313,15 @@ function parseAnswer(
   const trimmed = text?.trim();
   if (!trimmed) return ANSWER_BULLETS;
 
-  const sentences = trimmed
+  const shortSentences = trimmed
     .split(/\n+|(?<=\.)\s+/)
     .map((s) => s.trim().replace(/\.$/, ''))
     .filter(Boolean)
-    .slice(0, 4)
-    .map((s) => truncateWords(s, MAX_WORDS_PER_BULLET));
+    .filter((s) => s.split(/\s+/).length <= MAX_WORDS_PER_BULLET)
+    .slice(0, MAX_BULLETS);
 
-  if (sentences.length === 0) return ANSWER_BULLETS;
-  return sentences.map((t, i) => ({ text: t, lead: i === 0 }));
+  if (shortSentences.length === 0) return ANSWER_BULLETS;
+  return shortSentences.map((t, i) => ({ text: t, lead: i === 0 }));
 }
 
 function AccuracyGauge({ value }: { value: number }) {

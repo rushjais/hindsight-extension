@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { AdviceResult, Profile } from '@hindsight/types';
 import { cn } from '@/lib/utils';
 import { ProfileView, type ProfileViewData } from '@/components/ProfileView';
 import { AdviceView } from '@/components/AdviceView';
 import {
-  DEMO_QUESTION,
-  getAdvice,
   getProfile,
+  loadCapturedFixtures,
   prefetch,
 } from '@/lib/skillsClient';
 
@@ -15,39 +13,34 @@ type View = 'profile' | 'advice';
 export default function App() {
   const [view, setView] = useState<View>('profile');
   const [profile, setProfile] = useState<ProfileViewData | null>(null);
-  const [advice, setAdvice] = useState<AdviceResult | null>(null);
   const [online, setOnline] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     setRefreshing(true);
-    const { profileLive, adviceLive } = await prefetch();
+    const captured = await loadCapturedFixtures();
+    const { profileLive } = await prefetch();
     const p = await getProfile([]);
-    const a = await getAdvice(
-      DEMO_QUESTION,
-      p.data.profile as unknown as Profile,
-    );
     setProfile(p.data as unknown as ProfileViewData);
-    setAdvice(a.data);
-    setOnline(profileLive && adviceLive);
+    setOnline(
+      profileLive || captured.profileLoaded || captured.adviceLoaded,
+    );
     setRefreshing(false);
   }, []);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { profileLive, adviceLive } = await prefetch();
+      const captured = await loadCapturedFixtures();
+      if (cancelled) return;
+      const { profileLive } = await prefetch();
       if (cancelled) return;
       const p = await getProfile([]);
       if (cancelled) return;
-      const a = await getAdvice(
-        DEMO_QUESTION,
-        p.data.profile as unknown as Profile,
-      );
-      if (cancelled) return;
       setProfile(p.data as unknown as ProfileViewData);
-      setAdvice(a.data);
-      setOnline(profileLive && adviceLive);
+      setOnline(
+        profileLive || captured.profileLoaded || captured.adviceLoaded,
+      );
     })();
     return () => {
       cancelled = true;
@@ -111,10 +104,8 @@ export default function App() {
           ) : (
             <LoadingState />
           )
-        ) : advice ? (
-          <AdviceView data={advice} />
         ) : (
-          <LoadingState />
+          <AdviceView />
         )}
       </main>
     </div>
