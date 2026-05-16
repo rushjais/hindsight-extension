@@ -1,0 +1,13 @@
+{
+  "profile": {
+    "user": "paul-graham",
+    "corpus_size": 12,
+    "total_takes": 4,
+    "resolved_takes": 0,
+    "overall_hit_rate": 0,
+    "by_domain": [],
+    "patterns": [],
+    "highlight_takes": []
+  },
+  "contradictions": []
+}

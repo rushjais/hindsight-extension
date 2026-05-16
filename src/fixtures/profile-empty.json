@@ -1,0 +1,13 @@
+{
+  "profile": {
+    "user": "new-user",
+    "corpus_size": 0,
+    "total_takes": 0,
+    "resolved_takes": 0,
+    "overall_hit_rate": 0,
+    "by_domain": [],
+    "patterns": [],
+    "highlight_takes": []
+  },
+  "contradictions": []
+}

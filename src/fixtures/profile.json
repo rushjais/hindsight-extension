@@ -1,0 +1,61 @@
+{
+  "profile": {
+    "user": "paul-graham",
+    "corpus_size": 200,
+    "total_takes": 47,
+    "resolved_takes": 38,
+    "overall_hit_rate": 0.71,
+    "by_domain": [
+      { "domain": "startup-tactics", "hit_rate": 0.82, "n": 17 },
+      { "domain": "tech-trends", "hit_rate": 0.54, "n": 12 },
+      { "domain": "geography", "hit_rate": 0.5, "n": 4 }
+    ],
+    "patterns": [
+      "Consistently right about startup tactics (82%)",
+      "Mixed on macro tech timing — often early by 2-4 years",
+      "Under-weighted geographic shifts since 2020"
+    ],
+    "highlight_takes": [
+      {
+        "take_id": "pg-001",
+        "claim_text": "Default-alive companies will outperform default-dead ones",
+        "claim_date": "2015",
+        "domain": "startup-tactics",
+        "verdict_summary": "Confirmed across YC batches 2015-2024 — default-alive predicted survival more reliably than any other early-stage metric",
+        "verdict": "correct"
+      },
+      {
+        "take_id": "pg-002",
+        "claim_text": "Cities will remain primary concentrators of ambition",
+        "claim_date": "2008",
+        "domain": "geography",
+        "verdict_summary": "Half-true through 2019; post-2020 remote shift redistributed ambition across smaller hubs (Austin, Miami, Bangalore)",
+        "verdict": "partially correct"
+      },
+      {
+        "take_id": "pg-003",
+        "claim_text": "Most successful startups will come from SF indefinitely",
+        "claim_date": "2010",
+        "domain": "geography",
+        "verdict_summary": "Refuted — by 2025 YC graduates founded in 14+ metros; SF share dropped from ~70% to ~38%",
+        "verdict": "incorrect"
+      }
+    ]
+  },
+  "contradictions": [
+    {
+      "topic": "What VCs are like",
+      "claim_a": {
+        "text": "VCs are arrogant and sneaky",
+        "source_page": "/brain/2005-essays/a-unified-theory-of-vc-suckage.md",
+        "date": "2005-03-15"
+      },
+      "claim_b": {
+        "text": "VCs are actually more upstanding than I thought, just timid",
+        "source_page": "/brain/2008-essays/how-to-be-an-angel-investor.md",
+        "date": "2008-11-10"
+      },
+      "contradiction_summary": "In 2005 he called VCs arrogant and sneaky; in 2008 he conceded they were actually more upstanding than he'd thought — just timid."
+    }
+  ]
+}

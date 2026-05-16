@@ -1,0 +1,148 @@
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/geist-mono';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Surface — warm neutral matching Claude brand */
+    --background: 45 29% 97%;          /* #FAF9F6 */
+    --foreground: 0 0% 10%;            /* #1A1A1A */
+
+    --card: 0 0% 100%;                 /* #FFFFFF */
+    --card-foreground: 0 0% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+
+    --surface-sunken: 45 27% 94%;      /* #F4F2EC */
+
+    /* Brand accent — Claude orange */
+    --primary: 15 63% 60%;             /* #D97757 */
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 16 53% 52%;       /* #C56745 */
+    --primary-active: 17 51% 44%;      /* #A85636 */
+
+    /* shadcn semantic — secondary/muted use sunken surface */
+    --secondary: 45 27% 94%;
+    --secondary-foreground: 0 0% 10%;
+
+    --muted: 45 27% 94%;
+    --muted-foreground: 0 0% 42%;      /* #6B6B6B */
+
+    /* shadcn accent slot = pale brand wash for hover states */
+    --accent: 20 82% 96%;              /* #FDF1EB */
+    --accent-foreground: 15 63% 40%;
+
+    --destructive: 0 70% 35%;          /* #991B1B */
+    --destructive-foreground: 0 0% 100%;
+
+    /* Border */
+    --border: 43 12% 88%;              /* #E5E3DE */
+    --border-strong: 42 11% 82%;       /* #D6D3CC */
+    --input: 43 12% 88%;
+    --ring: 15 63% 60%;
+
+    /* Text variants */
+    --text-secondary: 0 0% 42%;        /* #6B6B6B */
+    --text-muted: 0 0% 61%;            /* #9B9B9B */
+    --text-disabled: 0 0% 79%;         /* #C9C9C9 */
+
+    /* Radius */
+    --radius: 0.375rem;                /* 6px */
+
+    /* Verdict badges (functional, not brand) */
+    --verdict-green-bg: 141 84% 93%;       /* #DCFCE7 */
+    --verdict-green-fg: 143 64% 24%;       /* #166534 */
+    --verdict-green-border: 141 79% 85%;   /* #BBF7D0 */
+
+    --verdict-amber-bg: 48 96% 89%;        /* #FEF3C7 */
+    --verdict-amber-fg: 23 82% 31%;        /* #92400E */
+    --verdict-amber-border: 48 97% 77%;    /* #FDE68A */
+
+    --verdict-red-bg: 0 93% 94%;           /* #FEE2E2 */
+    --verdict-red-fg: 0 70% 35%;           /* #991B1B */
+    --verdict-red-border: 0 96% 89%;       /* #FECACA */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family:
+      'Geist Variable', Geist, ui-sans-serif, system-ui, -apple-system,
+      'Segoe UI', sans-serif;
+    font-feature-settings: 'cv11', 'ss01';
+    font-size: 13px;
+    line-height: 20px;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  code,
+  pre,
+  .font-mono,
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  code,
+  pre,
+  .font-mono {
+    font-family:
+      'Geist Mono Variable', 'Geist Mono', ui-monospace, 'SF Mono', Menlo,
+      monospace;
+  }
+
+  *:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px hsl(var(--accent));
+    border-color: hsl(var(--ring));
+  }
+
+  ::selection {
+    background-color: hsl(var(--accent));
+    color: hsl(var(--primary-active));
+  }
+}
+
+@layer utilities {
+  .shadow-xs {
+    box-shadow: 0 1px 2px 0 rgba(26, 26, 26, 0.04);
+  }
+  .shadow-sm {
+    box-shadow:
+      0 1px 3px 0 rgba(26, 26, 26, 0.06),
+      0 1px 2px 0 rgba(26, 26, 26, 0.04);
+  }
+  .shadow-md {
+    box-shadow:
+      0 4px 8px -2px rgba(26, 26, 26, 0.08),
+      0 2px 4px -2px rgba(26, 26, 26, 0.04);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}
