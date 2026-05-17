@@ -115,7 +115,6 @@ export function AdviceView() {
   const relevant_pages = advice?.relevant_pages ?? [];
   const fresh_signal = advice?.fresh_signal ?? [];
   const synthesized_take = advice?.synthesized_take ?? '';
-  const bullets = parseAnswer(synthesized_take);
   const blindSpot = resolveBlindSpot(advice);
 
   return (
@@ -207,11 +206,14 @@ export function AdviceView() {
         <>
       {/* BLIND SPOT WARNING — single sentence */}
       <section className="border border-border bg-surface-sunken p-4">
-        <div className="mb-2 flex items-center gap-1.5">
-          <WarningIcon />
-          <h2 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-foreground">
-            Blind Spot Warning
-          </h2>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5">
+            <WarningIcon />
+            <h2 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-foreground">
+              Blind Spot Warning
+            </h2>
+          </div>
+          <SkillBadge skill="calibrated-advise" />
         </div>
         <p className="text-[14px] font-medium leading-[1.45] text-foreground">
           {blindSpot.headline}
@@ -229,49 +231,44 @@ export function AdviceView() {
 
       {/* BRAIN PAGES — titles + relevance, nothing else */}
       <section>
-        <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-text-secondary">
-          Brain Pages
-        </h2>
+        <div className="mb-3 flex items-baseline justify-between gap-2">
+          <h2 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-text-secondary">
+            Brain Pages
+          </h2>
+          <SkillBadge skill="ZeroEntropy" />
+        </div>
         <BrainPagesList pages={relevant_pages} />
       </section>
 
       {/* FRESH SIGNAL — headline + source + date, no body */}
       <section>
-        <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-text-secondary">
-          Fresh Signal
-        </h2>
+        <div className="mb-3 flex items-baseline justify-between gap-2">
+          <h2 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-text-secondary">
+            Fresh Signal
+          </h2>
+          <SkillBadge skill="The Hog" />
+        </div>
         <FreshSignalList signals={fresh_signal} />
       </section>
 
-      {/* CALIBRATED ANSWER — bullets */}
+      {/* CALIBRATED ANSWER — full synthesized take */}
       <section className="border border-border bg-card p-4">
         <div className="mb-3 flex items-baseline justify-between gap-2">
-          <h2 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-text-secondary">
-            Calibrated Answer
-          </h2>
+          <div className="flex items-baseline gap-2">
+            <h2 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-text-secondary">
+              Calibrated Answer
+            </h2>
+            <SkillBadge skill="calibrated-advise" />
+          </div>
           <ConfidencePill level="high" />
         </div>
-        <ul className="space-y-2">
-          {bullets.map((b, i) => (
-            <li
-              key={i}
-              className="flex gap-2 text-[13px] leading-[1.45] text-foreground"
-            >
-              <span
-                className="mt-[7px] shrink-0 rounded-full"
-                style={{
-                  width: 4,
-                  height: 4,
-                  backgroundColor: b.lead ? '#D97757' : '#9B9B9B',
-                }}
-                aria-hidden
-              />
-              <span className={b.lead ? 'font-semibold' : ''}>
-                {linkifyEssayMentions(b.text, relevant_pages)}
-              </span>
-            </li>
+        <div className="space-y-3 text-[13px] leading-[1.5] text-foreground">
+          {splitParagraphs(synthesized_take).map((para, i) => (
+            <p key={i} className={i === 0 ? 'font-medium' : ''}>
+              {linkifyEssayMentions(para, relevant_pages)}
+            </p>
           ))}
-        </ul>
+        </div>
       </section>
         </>
       ) : null}
@@ -279,14 +276,27 @@ export function AdviceView() {
   );
 }
 
-// Readability rules applied to every Calibrated Answer render:
-//   - Max 3 bullets
-//   - Max 14 words per bullet (longer sentences are skipped, not truncated)
-//   - No ellipsis — bullets must be full short sentences
-// If no qualifying short sentences, fall back to a single bullet containing
-// the raw synthesized_take — never invent question-specific content.
-const MAX_BULLETS = 3;
-const MAX_WORDS_PER_BULLET = 14;
+// Split a synthesis paragraph into readable chunks. Honors explicit
+// double-newlines as paragraph breaks; otherwise splits on sentence
+// boundaries to keep paragraphs visually digestible.
+function splitParagraphs(text: string): string[] {
+  const trimmed = text?.trim();
+  if (!trimmed) return [];
+  // Explicit paragraph breaks first
+  const parts = trimmed.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+  if (parts.length > 1) return parts;
+  // Otherwise group every 2-3 sentences into a paragraph for readability
+  const sentences = trimmed
+    .split(/(?<=[.!?])\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (sentences.length <= 2) return [trimmed];
+  const out: string[] = [];
+  for (let i = 0; i < sentences.length; i += 2) {
+    out.push(sentences.slice(i, i + 2).join(' '));
+  }
+  return out;
+}
 
 // Wrap any mention of an essay title from `pages` in an <a> tag pointing
 // at that essay's URL. Matches longest titles first to avoid e.g. "How to"
@@ -325,24 +335,6 @@ function linkifyEssayMentions(
   });
 }
 
-function parseAnswer(
-  text: string | undefined | null,
-): { text: string; lead?: boolean }[] {
-  const trimmed = text?.trim();
-  if (!trimmed) return [];
-
-  const shortSentences = trimmed
-    .split(/\n+|(?<=\.)\s+/)
-    .map((s) => s.trim().replace(/\.$/, ''))
-    .filter(Boolean)
-    .filter((s) => s.split(/\s+/).length <= MAX_WORDS_PER_BULLET)
-    .slice(0, MAX_BULLETS);
-
-  // No qualifying short sentences? Show the raw answer as a single lead
-  // bullet rather than inventing question-specific content.
-  if (shortSentences.length === 0) return [{ text: trimmed, lead: true }];
-  return shortSentences.map((t, i) => ({ text: t, lead: i === 0 }));
-}
 
 function AccuracyGauge({ value }: { value: number }) {
   const w = 200;
@@ -508,6 +500,19 @@ function FreshSignalList({ signals }: { signals: FreshSignalItem[] }) {
         </div>
       ))}
     </div>
+  );
+}
+
+// Tiny monospace badge showing which skill / service generated a section.
+// Surfaces the engineering work at-a-glance for technical viewers.
+export function SkillBadge({ skill }: { skill: string }) {
+  return (
+    <span
+      className="font-mono text-[10px] text-text-muted/80"
+      title={`Generated by the ${skill} skill`}
+    >
+      via {skill}
+    </span>
   );
 }
 

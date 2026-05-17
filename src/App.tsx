@@ -48,7 +48,7 @@ export default function App() {
   }, []);
 
   return (
-    <div className="mx-auto flex h-full w-[380px] max-w-[380px] flex-col border-x border-border bg-background text-foreground">
+    <div className="mx-auto flex h-full w-[520px] max-w-[520px] flex-col border-x border-border bg-background text-foreground">
       <header className="flex items-center justify-between border-b border-border px-4 py-3">
         <div className="flex items-center gap-2">
           <h1 className="text-md tracking-tight">Hindsight</h1>
@@ -108,7 +108,46 @@ export default function App() {
           <AdviceView />
         )}
       </main>
+      <SkillsFooter online={online} />
     </div>
+  );
+}
+
+// Footer credit listing the GBrain skills powering Hindsight. Filled
+// dots = skill is being exercised by the current view; grey dots = wired
+// in but not the focus of this view. Surfaces the engineering depth at
+// a glance.
+function SkillsFooter({ online }: { online: boolean }) {
+  const skills = [
+    'extract-takes',
+    'resolve-outcomes',
+    'hindsight-profile',
+    'find-contradictions',
+    'calibrated-advise',
+    'find-abandoned-threads',
+  ];
+  return (
+    <footer className="border-t border-border bg-surface-sunken px-4 py-2.5">
+      <div className="mb-1 flex items-center justify-between text-[9px] uppercase tracking-[0.1em] text-text-muted">
+        <span>Skills</span>
+        <span className="font-mono">
+          {online ? 'live · localhost:3001' : 'cached fixtures'}
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-x-3 gap-y-1 font-mono text-[10px] text-text-secondary">
+        {skills.map((s) => (
+          <span key={s} className="flex items-center gap-1">
+            <span
+              className={cn(
+                'inline-block size-1.5 rounded-full',
+                online ? 'bg-[#16A34A]' : 'bg-text-muted',
+              )}
+            />
+            {s}
+          </span>
+        ))}
+      </div>
+    </footer>
   );
 }
 

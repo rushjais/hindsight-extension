@@ -4,6 +4,7 @@ import type {
   Profile,
   TakeDomain,
 } from '@hindsight/types';
+import { SkillBadge } from '@/components/AdviceView';
 
 type AbandonedThreadEvidence = {
   event: string;
@@ -154,9 +155,12 @@ export function ProfileView({ data }: { data: ProfileViewData }) {
 
       {/* DOMAIN PERFORMANCE */}
       <section className="border border-border bg-card p-4">
-        <h2 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.06em] text-text-secondary">
-          Domain Performance
-        </h2>
+        <div className="mb-4 flex items-baseline justify-between gap-2">
+          <h2 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-text-secondary">
+            Domain Performance
+          </h2>
+          <SkillBadge skill="hindsight-profile" />
+        </div>
         {by_domain.length === 0 ? (
           <EmptyHint>
             {profile.total_takes === 0
@@ -237,9 +241,12 @@ export function ProfileView({ data }: { data: ProfileViewData }) {
 
       {/* RECENT VERDICTS — compact feed */}
       <section>
-        <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-text-secondary">
-          Recent Verdicts
-        </h2>
+        <div className="mb-2 flex items-baseline justify-between gap-2">
+          <h2 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-text-secondary">
+            Recent Verdicts
+          </h2>
+          <SkillBadge skill="resolve-outcomes" />
+        </div>
         {highlight_takes.length === 0 ? (
           <EmptyHint>Verdicts appear once outcomes resolve.</EmptyHint>
         ) : null}
@@ -272,13 +279,16 @@ export function ProfileView({ data }: { data: ProfileViewData }) {
 
       {/* PERSPECTIVE SHIFT (self-contradictions) */}
       <section>
-        <h2
-          className="mb-3 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em]"
-          style={{ color: '#D97757' }}
-        >
-          <ShiftIcon />
-          Perspective Shift
-        </h2>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h2
+            className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em]"
+            style={{ color: '#D97757' }}
+          >
+            <ShiftIcon />
+            Perspective Shift
+          </h2>
+          <SkillBadge skill="find-contradictions" />
+        </div>
         {contradictions.length === 0 ? (
           <EmptyHint>
             No contradictions surfaced yet. They appear as your corpus grows.
@@ -328,13 +338,16 @@ export function ProfileView({ data }: { data: ProfileViewData }) {
       {/* THREADS WORTH REOPENING */}
       {abandoned_threads.length > 0 ? (
         <section>
-          <h2
-            className="mb-3 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em]"
-            style={{ color: '#D97757' }}
-          >
-            <ReopenIcon />
-            Threads Worth Reopening
-          </h2>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h2
+              className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em]"
+              style={{ color: '#D97757' }}
+            >
+              <ReopenIcon />
+              Threads Worth Reopening
+            </h2>
+            <SkillBadge skill="find-abandoned-threads" />
+          </div>
           <div className="space-y-3">
             {abandoned_threads.map((t) => (
               <article
