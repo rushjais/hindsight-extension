@@ -219,13 +219,17 @@ export function AdviceView() {
           {blindSpot.headline}
         </p>
         {blindSpot.pattern ? (
-          <p className="mt-3 text-[11px] leading-[1.5] text-text-muted">
-            <span className="font-semibold uppercase tracking-[0.06em]">
-              Pattern
-            </span>
-            <span className="mx-1.5 text-text-muted/60">·</span>
-            {blindSpot.pattern}
-          </p>
+          <div className="mt-3">
+            <Collapse teaser="Show calibration pattern">
+              <p className="text-[11px] leading-[1.5] text-text-muted">
+                <span className="font-semibold uppercase tracking-[0.06em]">
+                  Pattern
+                </span>
+                <span className="mx-1.5 text-text-muted/60">·</span>
+                {blindSpot.pattern}
+              </p>
+            </Collapse>
+          </div>
         ) : null}
       </section>
 
@@ -263,11 +267,29 @@ export function AdviceView() {
           <ConfidencePill level="high" />
         </div>
         <div className="space-y-3 text-[13px] leading-[1.5] text-foreground">
-          {splitParagraphs(synthesized_take).map((para, i) => (
-            <p key={i} className={i === 0 ? 'font-medium' : ''}>
-              {linkifyEssayMentions(para, relevant_pages)}
-            </p>
-          ))}
+          {(() => {
+            const paras = splitParagraphs(synthesized_take);
+            if (paras.length === 0) return null;
+            const [lead, ...rest] = paras;
+            return (
+              <>
+                <p className="font-medium">
+                  {linkifyEssayMentions(lead, relevant_pages)}
+                </p>
+                {rest.length > 0 ? (
+                  <Collapse teaser={`Show full answer (${rest.length} more)`}>
+                    <div className="space-y-3">
+                      {rest.map((para, i) => (
+                        <p key={i}>
+                          {linkifyEssayMentions(para, relevant_pages)}
+                        </p>
+                      ))}
+                    </div>
+                  </Collapse>
+                ) : null}
+              </>
+            );
+          })()}
         </div>
       </section>
         </>
@@ -442,15 +464,28 @@ function categoryFromUrl(url: string): string | null {
   return seg;
 }
 
+function firstSentence(s: string): string {
+  const trimmed = s.trim();
+  const m = trimmed.match(/^[^.!?]+[.!?]/);
+  if (m) return m[0].trim();
+  // No sentence terminator — fall back to first 18 words.
+  const words = trimmed.split(/\s+/);
+  if (words.length <= 18) return trimmed;
+  return words.slice(0, 18).join(' ') + '…';
+}
+
 function BrainPagesList({ pages }: { pages: BrainPage[] }) {
   return (
     <div className="divide-y divide-border border-y border-border">
       {pages.map((p) => {
         const category = categoryFromUrl(p.url);
+        const rel = p.relevance?.trim();
+        const teaser = rel ? firstSentence(rel) : '';
+        const hasMore = rel && rel.length > teaser.length;
         return (
           <div
             key={p.url}
-            className="flex flex-col gap-1 py-2.5"
+            className="flex flex-col gap-1.5 py-2.5"
           >
             <a
               href={p.url}
@@ -460,10 +495,24 @@ function BrainPagesList({ pages }: { pages: BrainPage[] }) {
             >
               {p.title}
             </a>
-            {p.relevance ? (
-              <p className="text-[11px] leading-[1.4] text-text-secondary italic">
-                {p.relevance}
-              </p>
+            {rel ? (
+              hasMore ? (
+                <Collapse
+                  teaser={
+                    <span className="text-[11px] leading-[1.4] text-text-secondary italic">
+                      {teaser}
+                    </span>
+                  }
+                >
+                  <p className="text-[11px] leading-[1.4] text-text-secondary italic">
+                    {rel}
+                  </p>
+                </Collapse>
+              ) : (
+                <p className="text-[11px] leading-[1.4] text-text-secondary italic">
+                  {rel}
+                </p>
+              )
             ) : null}
             {category ? (
               <span className="text-[10px] uppercase tracking-[0.06em] text-text-muted">
@@ -500,6 +549,28 @@ function FreshSignalList({ signals }: { signals: FreshSignalItem[] }) {
         </div>
       ))}
     </div>
+  );
+}
+
+// Click-to-expand wrapper using native <details>. `teaser` shows when
+// collapsed (one-liner), `children` reveal on open. Caret rotates.
+export function Collapse({
+  teaser,
+  children,
+}: {
+  teaser: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <details className="group">
+      <summary className="flex cursor-pointer list-none items-baseline gap-1.5 text-[11px] text-text-muted hover:text-foreground">
+        <span className="font-mono text-[10px] transition-transform group-open:rotate-90">
+          ▸
+        </span>
+        <span className="flex-1">{teaser}</span>
+      </summary>
+      <div className="mt-2 pl-4">{children}</div>
+    </details>
   );
 }
 
