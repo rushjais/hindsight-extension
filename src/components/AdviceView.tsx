@@ -12,7 +12,6 @@ import type {
 } from '@hindsight/types';
 import { getAdvice, getCapturedAdvice } from '@/lib/skillsClient';
 
-const RELEVANCE_SCORES = [94, 87, 81, 76, 71, 67];
 const WARNING_AMBER = '#CA8A04';
 
 const BLIND_SPOT_HEADLINE_MAX_WORDS = 16;
@@ -51,15 +50,6 @@ function resolveBlindSpot(advice: AdviceResult | null): {
 
   return { headline, pattern };
 }
-
-// Fallback when the live answer can't be parsed into 3 short bullets.
-// Order matches the readability rule: recommendation, historical reason,
-// what fresh signal changes.
-const ANSWER_BULLETS: { text: string; lead?: boolean }[] = [
-  { text: 'Expand to global remote founders — go broad on geography', lead: true },
-  { text: 'Past high-conviction structural calls have a low hit rate here' },
-  { text: 'AI tooling is collapsing the Bay Area density advantage' },
-];
 
 export function AdviceView() {
   const [question, setQuestion] = useState('');
@@ -303,7 +293,8 @@ export function AdviceView() {
 //   - Max 3 bullets
 //   - Max 14 words per bullet (longer sentences are skipped, not truncated)
 //   - No ellipsis — bullets must be full short sentences
-// Fall back to ANSWER_BULLETS when the input has no qualifying sentences.
+// If no qualifying short sentences, fall back to a single bullet containing
+// the raw synthesized_take — never invent question-specific content.
 const MAX_BULLETS = 3;
 const MAX_WORDS_PER_BULLET = 14;
 
@@ -311,7 +302,7 @@ function parseAnswer(
   text: string | undefined | null,
 ): { text: string; lead?: boolean }[] {
   const trimmed = text?.trim();
-  if (!trimmed) return ANSWER_BULLETS;
+  if (!trimmed) return [];
 
   const shortSentences = trimmed
     .split(/\n+|(?<=\.)\s+/)
@@ -320,7 +311,9 @@ function parseAnswer(
     .filter((s) => s.split(/\s+/).length <= MAX_WORDS_PER_BULLET)
     .slice(0, MAX_BULLETS);
 
-  if (shortSentences.length === 0) return ANSWER_BULLETS;
+  // No qualifying short sentences? Show the raw answer as a single lead
+  // bullet rather than inventing question-specific content.
+  if (shortSentences.length === 0) return [{ text: trimmed, lead: true }];
   return shortSentences.map((t, i) => ({ text: t, lead: i === 0 }));
 }
 
@@ -433,45 +426,30 @@ function categoryFromUrl(url: string): string | null {
 function BrainPagesList({ pages }: { pages: BrainPage[] }) {
   return (
     <div className="divide-y divide-border border-y border-border">
-      {pages.map((p, i) => {
-        const score = RELEVANCE_SCORES[i] ?? 65;
+      {pages.map((p) => {
         const category = categoryFromUrl(p.url);
         return (
           <div
             key={p.url}
-            className="flex items-start gap-2 py-2.5"
+            className="flex flex-col gap-1 py-2.5"
           >
-            <div className="min-w-0 flex-1">
-              <p className="text-[13px] font-medium leading-[1.4] text-foreground">
-                {p.title}
+            <p className="text-[13px] font-medium leading-[1.4] text-foreground">
+              {p.title}
+            </p>
+            {p.relevance ? (
+              <p className="text-[11px] leading-[1.4] text-text-secondary italic">
+                {p.relevance}
               </p>
-              {category ? (
-                <span className="mt-0.5 inline-block text-[10px] uppercase tracking-[0.06em] text-text-muted">
-                  {category}
-                </span>
-              ) : null}
-            </div>
-            <RelevanceBadge score={score} />
+            ) : null}
+            {category ? (
+              <span className="text-[10px] uppercase tracking-[0.06em] text-text-muted">
+                {category}
+              </span>
+            ) : null}
           </div>
         );
       })}
     </div>
-  );
-}
-
-function RelevanceBadge({ score }: { score: number }) {
-  return (
-    <span
-      className="shrink-0 rounded-sm border px-1.5 py-[1px] font-mono text-[10px] font-semibold tabular-nums"
-      style={{
-        borderColor: 'rgba(217, 119, 87, 0.3)',
-        backgroundColor: 'rgba(217, 119, 87, 0.06)',
-        color: '#A85636',
-      }}
-      title={`Reranker relevance score: ${score}%`}
-    >
-      {score}%
-    </span>
   );
 }
 
