@@ -41,13 +41,13 @@ function resolveBlindSpot(advice: AdviceResult | null): {
   } | null)?.blind_spot;
   const adj = advice?.calibration_adjustment;
 
-  const rawHeadline = bs?.headline ?? adj?.adjustment_text ?? '';
-  const rawPattern = bs?.pattern ?? adj?.applicable_pattern ?? '';
+  const rawHeadline = (bs?.headline ?? adj?.adjustment_text ?? '').trim();
+  const rawPattern = (bs?.pattern ?? adj?.applicable_pattern ?? '').trim();
 
-  const headline =
-    clampWords(rawHeadline, BLIND_SPOT_HEADLINE_MAX_WORDS) ||
-    BLIND_SPOT_FALLBACK_HEADLINE;
-  const pattern = clampWords(rawPattern, BLIND_SPOT_PATTERN_MAX_WORDS);
+  // Show the full text — the calibration narrative is the point of this
+  // section, truncating mid-sentence undermines it.
+  const headline = rawHeadline || BLIND_SPOT_FALLBACK_HEADLINE;
+  const pattern = rawPattern;
 
   return { headline, pattern };
 }
