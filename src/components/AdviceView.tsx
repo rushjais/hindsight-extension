@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
   type KeyboardEvent,
+  type ReactNode,
 } from 'react';
 import type {
   AdviceResult,
@@ -265,7 +266,9 @@ export function AdviceView() {
                 }}
                 aria-hidden
               />
-              <span className={b.lead ? 'font-semibold' : ''}>{b.text}</span>
+              <span className={b.lead ? 'font-semibold' : ''}>
+                {linkifyEssayMentions(b.text, relevant_pages)}
+              </span>
             </li>
           ))}
         </ul>
@@ -284,6 +287,43 @@ export function AdviceView() {
 // the raw synthesized_take — never invent question-specific content.
 const MAX_BULLETS = 3;
 const MAX_WORDS_PER_BULLET = 14;
+
+// Wrap any mention of an essay title from `pages` in an <a> tag pointing
+// at that essay's URL. Matches longest titles first to avoid e.g. "How to"
+// stealing from "How to Be Silicon Valley". Case-insensitive, word-boundary.
+function linkifyEssayMentions(
+  text: string,
+  pages: BrainPage[],
+): ReactNode {
+  if (!pages.length || !text) return text;
+  const titles = [...pages]
+    .filter((p) => p.title && p.url)
+    .sort((a, b) => b.title.length - a.title.length);
+  const pattern = new RegExp(
+    `(${titles.map((p) => p.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`,
+    'gi',
+  );
+  const parts = text.split(pattern);
+  return parts.map((part, i) => {
+    const hit = titles.find(
+      (p) => p.title.toLowerCase() === part.toLowerCase(),
+    );
+    if (hit) {
+      return (
+        <a
+          key={i}
+          href={hit.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline decoration-text-muted/60 underline-offset-2 hover:decoration-foreground"
+        >
+          {part}
+        </a>
+      );
+    }
+    return part;
+  });
+}
 
 function parseAnswer(
   text: string | undefined | null,
@@ -420,9 +460,14 @@ function BrainPagesList({ pages }: { pages: BrainPage[] }) {
             key={p.url}
             className="flex flex-col gap-1 py-2.5"
           >
-            <p className="text-[13px] font-medium leading-[1.4] text-foreground">
+            <a
+              href={p.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[13px] font-medium leading-[1.4] text-foreground underline decoration-text-muted/40 underline-offset-2 hover:decoration-foreground"
+            >
               {p.title}
-            </p>
+            </a>
             {p.relevance ? (
               <p className="text-[11px] leading-[1.4] text-text-secondary italic">
                 {p.relevance}
@@ -445,9 +490,14 @@ function FreshSignalList({ signals }: { signals: FreshSignalItem[] }) {
     <div className="divide-y divide-border border-y border-border">
       {signals.map((s) => (
         <div key={s.url} className="py-2.5">
-          <p className="text-[13px] font-medium leading-[1.4] text-foreground">
+          <a
+            href={s.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[13px] font-medium leading-[1.4] text-foreground underline decoration-text-muted/40 underline-offset-2 hover:decoration-foreground"
+          >
             {s.title}
-          </p>
+          </a>
           <div className="mt-1 flex items-baseline gap-2 text-text-muted">
             <span className="text-[11px]">{s.source}</span>
             <span className="text-text-muted/60">·</span>
