@@ -204,19 +204,6 @@ export function AdviceView() {
       {/* Everything below renders only after an answer arrives */}
       {advice ? (
         <>
-      {/* ACCURACY GAUGE — top visual anchor */}
-      <section className="border border-border bg-card px-4 py-5">
-        <div className="flex flex-col items-center">
-          <AccuracyGauge value={50} />
-          <div className="mt-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-text-secondary">
-            Geography accuracy
-          </div>
-          <div className="mt-0.5 font-mono text-[10px] tabular-nums text-text-muted">
-            n=4 takes
-          </div>
-        </div>
-      </section>
-
       {/* BLIND SPOT WARNING — single sentence */}
       <section className="border border-border bg-surface-sunken p-4">
         <div className="mb-2 flex items-center gap-1.5">
