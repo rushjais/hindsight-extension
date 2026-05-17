@@ -297,6 +297,17 @@ function looksLikeProfile(r: Record<string, unknown>): boolean {
   return 'overall_hit_rate' in r && 'by_domain' in r;
 }
 
+// A profile is "useful" only if it has resolved takes and non-empty
+// domain breakdown. The live server returns a structurally-valid but
+// empty profile when called with resolved_takes: [], which would render
+// as the "No takes logged yet" empty state — useless for the demo.
+function profileIsUseful(p: ProfileResponse | null): boolean {
+  if (!p) return false;
+  const inner = (p as { profile?: { resolved_takes?: number; by_domain?: unknown[] } }).profile;
+  if (!inner) return false;
+  return (inner.resolved_takes ?? 0) > 0 && (inner.by_domain?.length ?? 0) > 0;
+}
+
 export async function getProfile(
   resolvedTakes: Take[],
 ): Promise<FetchResult<ProfileResponse>> {
@@ -304,24 +315,26 @@ export async function getProfile(
     console.log('[skillsClient] getProfile → forced fixture');
     return { data: fixtureForState(), live: false };
   }
-  // Captured fixtures are the locked demo content — primary source.
-  // We skip the live fetch when present (the live server returns an empty
-  // profile when called with resolved_takes: []).
-  if (capturedProfile) {
+  // Captured fixtures (data/captured/profile.json via symlink) are the
+  // locked demo content — primary source when present and non-empty.
+  if (profileIsUseful(capturedProfile)) {
     console.log('[skillsClient] getProfile → captured (primary)');
-    return { data: capturedProfile, live: false };
+    return { data: capturedProfile as ProfileResponse, live: false };
   }
-  if (profileCache) {
+  if (profileIsUseful(profileCache)) {
     console.log('[skillsClient] getProfile → cache hit');
-    return { data: profileCache, live: true };
+    return { data: profileCache as ProfileResponse, live: true };
   }
   const fresh = await fetchProfile(resolvedTakes);
-  if (fresh) {
+  if (profileIsUseful(fresh)) {
     profileCache = fresh;
     console.log('[skillsClient] getProfile → live', fresh);
-    return { data: fresh, live: true };
+    return { data: fresh as ProfileResponse, live: true };
   }
-  console.log('[skillsClient] getProfile → baked-in fixture fallback');
+  // Live returned empty or failed — bundled wrappedProfileFixture has
+  // the real captured stats (228 essays, 181 takes, 15 resolved, 67% hit
+  // rate, full by_domain breakdown).
+  console.log('[skillsClient] getProfile → bundled fixture (live was empty)');
   return { data: fixtureForState(), live: false };
 }
 

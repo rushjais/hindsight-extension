@@ -97,16 +97,20 @@ export default function App() {
         </nav>
       </header>
 
+      {/*
+        Keep BOTH views mounted always — only toggle visibility — so the
+        AdviceView's internal state (typed question, current answer,
+        loading flags) survives tab switches. Unmounting on tab change
+        was wiping the user's typed question every time they peeked at
+        the Profile.
+      */}
       <main className="flex-1 overflow-y-auto">
-        {view === 'profile' ? (
-          profile ? (
-            <ProfileView data={profile} />
-          ) : (
-            <LoadingState />
-          )
-        ) : (
+        <div className={view === 'profile' ? 'block' : 'hidden'}>
+          {profile ? <ProfileView data={profile} /> : <LoadingState />}
+        </div>
+        <div className={view === 'advice' ? 'block' : 'hidden'}>
           <AdviceView />
-        )}
+        </div>
       </main>
       <SkillsFooter online={online} />
     </div>
